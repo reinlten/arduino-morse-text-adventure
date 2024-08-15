@@ -298,7 +298,7 @@ int roomRevealed = 0;
 /* Set when game is over */
 int gameOver;
 
-const char IntroText[] PROGMEM = "Your three-year-old grandson has gone\r\nmissing and was last seen headed in the\r\ndirection of the abandoned family farm.\r\nIt's a dangerous place to play. You\r\nhave to find him before he gets hurt,\r\nand it will be getting dark soon...\r\n";
+const char IntroText[] PROGMEM = "Your three-year-old grandson has gone\r\nmissing and was last seen headed in the\r\ndirection of the abandoned family farm.\r\nIt's a dangerous place to play. You\r\nhave to find him before he gets hurt,\r\nand it will be getting dark soon...";
 
 const char helpString[] PROGMEM = "Valid commands:\r\ngo east/west/north/south/up/down \r\nlook\r\nuse <object>\r\nexamine <object>\r\ntake <object>\r\ndrop <object>\r\ninventory\r\nhelp\r\nquit\r\nYou can abbreviate commands and\r\ndirections to the first letter.\r\nType just the first letter of\r\na direction to move.\r\n";
 
@@ -310,29 +310,83 @@ char pbuffer[200];
 
 // the number of the pushbutton pin
 const int buttonPin = 2;  
+const int ledPin = 13;
 
 // Variables for Morse decoding
 int buttonState = 0; 
 unsigned long time_high = 0;
 unsigned long time_low = 0;
-int wait_time = 5000;
+const int wait_time = 5000;
 int high_counter = 0;
 int low_counter = 0;
-int button_times_high[100];
-int button_times_low[100];
+int button_times_high[50];
+int button_times_sorted[50];
+int button_times_low[50];
+int button_times_sorted_d[50];
 int state;
 int avg_high_time = 0;
 int avg_low_time = 0;
-int high_time_max = 0;
-int high_time_min = 10000;
-int low_time_max = 0;
-int low_time_min = 10000;
 String code = "";
 String code_text = "";
 
+void morseEncode(String str) {
+  const int letter_time = 1000;
+  const int dot_time = 200;
+  const int dash_time = 800;
+  String encoded = "";
+
+  for(int i = 0; i < str.length(); i++){
+    if(letterToMorse(str[i]) == "??"){
+      if(str[i] == " "){
+        encoded += "x";
+      }
+    }else{
+      encoded += letterToMorse(str[i]) + " ";
+    }
+  }
+
+  Serial.println(encoded);
+  encoded = "";
+}
+
+String letterToMorse(char code) {
+  code = toupper(code);
+  if (code == 'A') return ".-";
+  if (code == 'B') return "-...";
+  if (code == 'C') return "-.-.";
+  if (code == 'D') return "-..";
+  if (code == 'E') return ".";
+  if (code == 'F') return "..-.";
+  if (code == 'G') return "--.";
+  if (code == 'H') return "....";
+  if (code == 'I') return "..";
+  if (code == 'J') return ".---";
+  if (code == 'K') return "-.-";
+  if (code == 'L') return ".-..";
+  if (code == 'M') return "--";
+  if (code == 'N') return "-.";
+  if (code == 'O') return "---";
+  if (code == 'P') return ".--.";
+  if (code == 'Q') return "--.-";
+  if (code == 'R') return ".-.";
+  if (code == 'S') return "...";
+  if (code == 'T') return "-";
+  if (code == 'U') return "..-";
+  if (code == 'V') return "...-";
+  if (code == 'W') return ".--";
+  if (code == 'X') return "-..-";
+  if (code == 'Y') return "-.--";
+  if (code == 'Z') return "--..";
+  if (code == ' ') return " ";
+  return "??";  // Unbekanntes Zeichen
+}
+
+
 /* Display string */
 void xprint(String str) {
-  Serial.print(str);
+  Serial.println(str);
+  morseEncode(str);
+
 }
 
 /* Move to next line on screen. */
@@ -346,26 +400,10 @@ void xprintln(String str) {
   xprintln();
 }
 
-/* Read serial input until enter is pressed. */
-void xinput() {
-  int incomingByte = 0;
-  int inx = 0;
-  do {
-     if (Serial.available() > 0) {
-        // read the incoming byte:
-        incomingByte = Serial.read();
-        buffer[inx] = incomingByte;
-        inx++;
-     }
-  } while (incomingByte != 13);
-  /* Remove trailing newline */
-  buffer[inx-1] = '\0';
-  xprintln();
-}
-
 /* Display character on the screen.*/
 void xwrite(char c) {
   Serial.write(c);
+
 }
 
 /* Clear the screen */
@@ -507,17 +545,6 @@ void doLook()
     }
     xprintln();
 }
-
-/* Quit command */
-void doQuit()
-{
-    xprintln("Are you sure you want to quit (y/n)?");
-    xinput();
-    if (tolower(buffer[0]) == 'y') {
-        gameOver = 1;
-    }
-}
-
 /* Drop command */
 void doDrop()
 {
@@ -919,6 +946,21 @@ void initialize()
     locationOfItem[15] = LaundryRoom;      /* Cheese */
     locationOfItem[16] = MasterBedroom;    /* OldRadio */
 }
+
+void bubbleSort(int arr[], int n) {
+  for (int i = 0; i < n-1; i++) {
+    for (int j = 0; j < n-i-1; j++) {
+      if (arr[j] > arr[j+1]) {
+        // Elemente tauschen
+        int temp = arr[j];
+        arr[j] = arr[j+1];
+        arr[j+1] = temp;
+      }
+    }
+  }
+}
+
+
 void getMorseCode(){
   
   do{
@@ -937,12 +979,6 @@ void getMorseCode(){
           button_times_low[low_counter-1] = millis()-time_low;
           if(button_times_low[low_counter-1] > 10){
             avg_low_time += button_times_low[low_counter-1];
-            if(button_times_low[low_counter-1] > low_time_max){
-              low_time_max = button_times_low[low_counter-1];
-            }
-            if(button_times_low[low_counter-1] < low_time_min){
-              low_time_min = button_times_low[low_counter-1];
-            }
 
           }else{
             low_counter--;
@@ -960,12 +996,7 @@ void getMorseCode(){
           button_times_high[high_counter-1] = millis()-time_high;
           if(button_times_high[high_counter-1] > 10){
             avg_high_time += button_times_high[high_counter-1];
-            if(button_times_high[high_counter-1] > high_time_max){
-              high_time_max = button_times_high[high_counter-1];
-            }
-            if(button_times_high[high_counter-1] < high_time_min){
-              high_time_min = button_times_high[high_counter-1];
-            }
+      
           }else{
             high_counter--;
           }
@@ -974,34 +1005,52 @@ void getMorseCode(){
     }
   }while(!((millis()-time_low > wait_time) && high_counter > 0 && low_counter > 0));
   
-  //Serial.println("High Times:");
+  Serial.println("High Times:");
   
-  /*
+  
   for(int i=0;i<high_counter;i++){
-    Serial.println(button_times_high[i]);
+    Serial.print(button_times_high[i]);
+    Serial.print(",");
   }
+  Serial.println();
 
   Serial.println("Low Times:");
   for(int i=0;i<low_counter;i++){
-    Serial.println(button_times_low[i]);
+    Serial.print(button_times_low[i]);
+    Serial.print(",");
   }
-
+  
+  Serial.println();
   Serial.println("---------------------");
 
-  Serial.println(avg_high_time);
-  Serial.println(avg_low_time);
-  Serial.println(high_counter);
-  Serial.println(low_counter);
 
-  */
+  for (int i = 0; i < high_counter; i++) {
+    button_times_sorted[i] = button_times_high[i];
+  }
+  bubbleSort(button_times_sorted, high_counter);
+  for(int i = 1; i < high_counter-1; i++){
+    if(button_times_sorted[i+1]-button_times_sorted[i] > 100){
+      avg_high_time = (button_times_sorted[i+1]+button_times_sorted[i])/2;
+      break;
+    }
+  }
+
+
+  for (int i = 0; i < low_counter; i++) {
+    button_times_sorted[i] = button_times_low[i];
+  }
+
+  bubbleSort(button_times_sorted, low_counter);
+  for(int i = 0; i < low_counter-1; i++){
+    if(button_times_sorted[i+1]-button_times_sorted[i] > 100){
+      avg_low_time = (button_times_sorted[i+1]+button_times_sorted[i])/2;
+      break;
+    }
+  }
+
 
   //avg_high_time = avg_high_time/high_counter;
   //avg_low_time = avg_low_time/(low_counter-1);
-
-  //avg times with max/min
-
-  avg_high_time = (high_time_max+high_time_min)/2;
-  avg_low_time = (low_time_max+low_time_min)/2;
 
   Serial.print("Avg. High: ");
   Serial.println(avg_high_time);
@@ -1098,6 +1147,7 @@ char decodeMorse(String code) {
 void setup() {
   Serial.begin(2400);
   pinMode(buttonPin, INPUT);
+  pinMode(ledPin, OUTPUT);
 }
 
 void loop() {
@@ -1134,8 +1184,6 @@ void loop() {
       code_text = "DROP " + code_text.substring(4);
       code_text.toCharArray(buffer,40);
       doDrop();
-    } else if (code_text.startsWith("QUIT")) {
-      doQuit();
     } else if (code_text.startsWith("XYZZY")) {
       xprintln("Nice try, but that won't work here.");
     } else {
@@ -1149,6 +1197,4 @@ void loop() {
   }
   
   xprint("Game over after "); xprint(String(turnsPlayed)); xprintln(" turns.");
-  xprintln("Press enter to restart.");
-  xinput();
 }
