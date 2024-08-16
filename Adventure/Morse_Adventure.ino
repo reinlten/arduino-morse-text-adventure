@@ -316,7 +316,7 @@ const int ledPin = 13;
 int buttonState = 0; 
 unsigned long time_high = 0;
 unsigned long time_low = 0;
-const int wait_time = 5000;
+const int wait_time = 3000;
 int high_counter = 0;
 int low_counter = 0;
 int button_times_high[50];
@@ -330,22 +330,47 @@ String code = "";
 String code_text = "";
 
 void morseEncode(String str) {
-  const int letter_time = 1000;
-  const int dot_time = 200;
-  const int dash_time = 800;
+  unsigned long letter_time = 2000;
+  unsigned long word_time = 1000;
+  unsigned long dot_time = 200;
+  unsigned long dash_time = 800;
+  unsigned long between_time = 400;
   String encoded = "";
 
   for(int i = 0; i < str.length(); i++){
     if(letterToMorse(str[i]) == "??"){
-      if(str[i] == " "){
-        encoded += "x";
-      }
+
+     
     }else{
       encoded += letterToMorse(str[i]) + " ";
     }
   }
 
   Serial.println(encoded);
+
+  for(int i = 0; i<encoded.length(); i++){
+    
+    if(encoded[i] == ' '){
+      delay(letter_time);
+    }
+    if(encoded[i] == 'x') {
+      delay(word_time);
+    }
+    if(encoded[i] == '.'){
+        digitalWrite(ledPin, HIGH);
+        delay(dot_time);
+        digitalWrite(ledPin,LOW);
+        delay(between_time);
+      }
+    if(encoded[i] == '-'){
+        digitalWrite(ledPin, HIGH);
+        delay(dash_time);
+        digitalWrite(ledPin,LOW);
+        delay(between_time);
+      }
+
+  }
+
   encoded = "";
 }
 
@@ -377,7 +402,7 @@ String letterToMorse(char code) {
   if (code == 'X') return "-..-";
   if (code == 'Y') return "-.--";
   if (code == 'Z') return "--..";
-  if (code == ' ') return " ";
+  if (code == ' ') return "x";
   return "??";  // Unbekanntes Zeichen
 }
 
@@ -1035,18 +1060,25 @@ void getMorseCode(){
     }
   }
 
+  Serial.println(low_counter);
 
-  for (int i = 0; i < low_counter; i++) {
+
+  for (int i = 0; i < low_counter-1; i++) {
     button_times_sorted[i] = button_times_low[i];
   }
 
   bubbleSort(button_times_sorted, low_counter);
+
   for(int i = 0; i < low_counter-1; i++){
+    Serial.print(button_times_sorted[i]);
+    Serial.print(",");
+  
     if(button_times_sorted[i+1]-button_times_sorted[i] > 100){
       avg_low_time = (button_times_sorted[i+1]+button_times_sorted[i])/2;
       break;
     }
   }
+  Serial.println();
 
 
   //avg_high_time = avg_high_time/high_counter;
