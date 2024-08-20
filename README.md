@@ -5,6 +5,7 @@ Additionaly, screen and keybord interaction is replaced by a simple LED and a bu
 The interaction with the system follows by entering/receiving morse code.
 
 <img src="https://dadecoza.github.io/images/graph.png" width="250">
+<img src="https://github.com/reinlten/arduino-morse-text-adventure/blob/master/WhatsApp%20Image%202024-08-20%20at%2016.37.59.jpeg" width="250">
 
 ### Below is the games original README.txt ...
 
