@@ -217,8 +217,11 @@ const char String_27[] PROGMEM = "The rats are coming towards you!";
 const char String_28[] PROGMEM = "The rats attack and you pass out.";
 const char String_29[] PROGMEM = "A wolf is circling around the tree.\nMatthew is up in the tree. You have to\nsave him! If only you had some kind of\nweapon!";
 const char String_30[] PROGMEM = "Matthew is afraid to come\ndown from the tree. If only you had\nsomething to coax him with.";
-const char String_31[] PROGMEM = "Congratulations! You succeeded and won\nthe game. I hope you had as much fun\nplaying the game as I did creating it.\n- Jeff Tranter <tranter@pobox.com>";
-const char *const StringTable[] PROGMEM = {String_0, String_1, String_2, String_3, String_4, String_5, String_6, String_7, String_8, String_9, String_10, String_11, String_12, String_13, String_14, String_15, String_16, String_17, String_18, String_19, String_20, String_21, String_22, String_23, String_24, String_25, String_26, String_27, String_28, String_29, String_30, String_31};
+const char String_31[] PROGMEM = "Congratulations! You succeeded and won the game.";
+const char IntroText[] PROGMEM = "Your three-year-old grandson has gone\r\nmissing and was last seen headed in the\r\ndirection of the abandoned family farm.\r\nIt's a dangerous place to play. You\r\nhave to find him before he gets hurt,\r\nand it will be getting dark soon...";
+const char helpString[] PROGMEM = "Valid commands:\r\ngo east/west/north/south/up/down \r\nlook\r\nuse <object>\r\nexamine <object>\r\ntake <object>\r\ndrop <object>\r\ninventory\r\nhelp\r\nquit\r\nYou can abbreviate commands and\r\ndirections to the first letter.\r\nType just the first letter of\r\na direction to move.\r\n";
+
+const char *const StringTable[] PROGMEM = {String_0, String_1, String_2, String_3, String_4, String_5, String_6, String_7, String_8, String_9, String_10, String_11, String_12, String_13, String_14, String_15, String_16, String_17, String_18, String_19, String_20, String_21, String_22, String_23, String_24, String_25, String_26, String_27, String_28, String_29, String_30, String_31, IntroText, helpString};
 
 /* DATA */
 
@@ -298,9 +301,6 @@ int roomRevealed = 0;
 /* Set when game is over */
 int gameOver;
 
-const char IntroText[] PROGMEM = "Your three-year-old grandson has gone\r\nmissing and was last seen headed in the\r\ndirection of the abandoned family farm.\r\nIt's a dangerous place to play. You\r\nhave to find him before he gets hurt,\r\nand it will be getting dark soon...";
-
-const char helpString[] PROGMEM = "Valid commands:\r\ngo east/west/north/south/up/down \r\nlook\r\nuse <object>\r\nexamine <object>\r\ntake <object>\r\ndrop <object>\r\ninventory\r\nhelp\r\nquit\r\nYou can abbreviate commands and\r\ndirections to the first letter.\r\nType just the first letter of\r\na direction to move.\r\n";
 
 /* Line of user input */
 char buffer[40];
@@ -309,8 +309,9 @@ char buffer[40];
 char pbuffer[200];
 
 // the number of the pushbutton pin
-const int buttonPin = 2;  
-const int ledPin = 13;
+const int buttonPin = 6;  
+const int ledPin = 3;
+const int analogPin = A7;
 
 // Variables for Morse decoding
 int buttonState = 0; 
@@ -329,50 +330,7 @@ int avg_low_time = 0;
 String code = "";
 String code_text = "";
 
-void morseEncode(String str) {
-  unsigned long letter_time = 2000;
-  unsigned long word_time = 1000;
-  unsigned long dot_time = 200;
-  unsigned long dash_time = 800;
-  unsigned long between_time = 400;
-  String encoded = "";
 
-  for(int i = 0; i < str.length(); i++){
-    if(letterToMorse(str[i]) == "??"){
-
-     
-    }else{
-      encoded += letterToMorse(str[i]) + " ";
-    }
-  }
-
-  Serial.println(encoded);
-
-  for(int i = 0; i<encoded.length(); i++){
-    
-    if(encoded[i] == ' '){
-      delay(letter_time);
-    }
-    if(encoded[i] == 'x') {
-      delay(word_time);
-    }
-    if(encoded[i] == '.'){
-        digitalWrite(ledPin, HIGH);
-        delay(dot_time);
-        digitalWrite(ledPin,LOW);
-        delay(between_time);
-      }
-    if(encoded[i] == '-'){
-        digitalWrite(ledPin, HIGH);
-        delay(dash_time);
-        digitalWrite(ledPin,LOW);
-        delay(between_time);
-      }
-
-  }
-
-  encoded = "";
-}
 
 String letterToMorse(char code) {
   code = toupper(code);
@@ -410,8 +368,57 @@ String letterToMorse(char code) {
 /* Display string */
 void xprint(String str) {
   Serial.println(str);
-  morseEncode(str);
 
+
+  unsigned long letter_time = 2000;
+  unsigned long word_time = 1000;
+  unsigned long dot_time = 200;
+  unsigned long dash_time = 800;
+  unsigned long between_time = 400;
+  String encoded;
+
+  for(int i = 0; i < str.length(); i++){
+    encoded = letterToMorse(str[i]);
+    
+    if(encoded == "??"){
+
+     
+    }else{
+      Serial.print(encoded);
+      Serial.print(" ");
+      for(int i = 0; i<encoded.length(); i++){
+        //Serial.println(analogRead(analogPin));
+        unsigned long analog_read = analogRead(analogPin)/2+1;
+
+        dot_time = analog_read;
+        between_time = 2*analog_read;
+        dash_time = 4*analog_read;
+        word_time = 5*analog_read;
+        letter_time = 8*analog_read;
+
+
+        if(encoded[i] == 'x') {
+          //delay(word_time);
+          Serial.println();
+        }
+        if(encoded[i] == '.'){
+          digitalWrite(ledPin, HIGH);
+          delay(dot_time);
+          digitalWrite(ledPin,LOW);
+          delay(between_time);
+        }
+        if(encoded[i] == '-'){
+          digitalWrite(ledPin, HIGH);
+          delay(dash_time);
+          digitalWrite(ledPin,LOW);
+          delay(between_time);
+        }
+
+      }
+      delay(letter_time);
+
+    }
+  }
 }
 
 /* Move to next line on screen. */
@@ -423,18 +430,6 @@ void xprintln() {
 void xprintln(String str) {
   xprint(str);
   xprintln();
-}
-
-/* Display character on the screen.*/
-void xwrite(char c) {
-  Serial.write(c);
-
-}
-
-/* Clear the screen */
-void clearScreen()
-{
-  xwrite(12);
 }
 
 /* Return 1 if carrying an item */
@@ -485,25 +480,26 @@ void doInventory()
         xprintln("  nothing");
 }
 
+
 /* Help command */
 void doHelp()
 {
-    char c;
+  char c;
     int j = 0;
     do {
       c = (char) pgm_read_byte(&helpString[j++]);
-      xwrite(c);
+      xprint(String(c));
     } while (c!='\0');
 }
 
 /* Intro screen */
 void doIntro()
 {
-    char c;
+   char c;
     int j = 0;
     do {
       c = (char) pgm_read_byte(&IntroText[j++]);
-      xwrite(c);
+      xprint(String(c));
     } while (c!='\0');
 }
 
@@ -1177,14 +1173,14 @@ char decodeMorse(String code) {
 }
 
 void setup() {
-  Serial.begin(2400);
+  Serial.begin(9600);
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(analogPin, INPUT);
 }
 
 void loop() {
   initialize();
-  clearScreen();
   doIntro();
   while (!gameOver) {
     getMorseCode();
@@ -1219,12 +1215,19 @@ void loop() {
     } else if (code_text.startsWith("XYZZY")) {
       xprintln("Nice try, but that won't work here.");
     } else {
-      xprintln("I don't understand. Try 'help'.");
+      
     }
     /* Handle special actions. */
     doActions();
   
     code_text = "";
+
+    for(int i = 0; i<20; i++){
+      digitalWrite(ledPin,HIGH);
+      delay(20);
+      digitalWrite(ledPin,LOW);
+      delay(20);
+    }
 
   }
   
